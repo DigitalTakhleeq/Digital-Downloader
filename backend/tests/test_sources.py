@@ -374,3 +374,10 @@ def test_ytdlp_source_universal_mode_handles_any_domain():
     assert src.can_handle(vurl("https://random-video-site.org/watch?v=123"))
     assert src.can_handle(vurl("https://tiktok.com/@user/video/123"))
     assert src.can_handle(vurl("https://vt.tiktok.com/ZSjR/"))
+
+
+def test_map_error_explains_login_wording_used_by_vimeo():
+    from backend.app.services.sources.ytdlp import map_error
+
+    err = map_error("ERROR: [vimeo] 1: The web client only works when logged-in. Use --cookies to provide account credentials")
+    assert err.reason == "auth_required"

@@ -180,7 +180,7 @@ def map_error(stderr: str) -> AppError:
             "The video platform requested bot verification for this IP address. Please try again shortly or use a VPN.",
             reason="bot_verification",
         )
-    if any(k in text for k in ("sign in", "log in", "login", "private", "members", "premium", "subscri", "http error 401", "http error 403", "account authentication is required", "instagram api is not granting access")):
+    if any(k in text for k in ("sign in", "log in", "login", "private", "members", "premium", "subscri", "logged-in", "logged in", "--cookies", "http error 401", "http error 403", "account authentication is required", "instagram api is not granting access")):
         return AppError(
             ErrorCode.MEDIA_NOT_AVAILABLE,
             "This media requires login or cookies. Add your cookies in Settings ⚙️ to download from this platform.",

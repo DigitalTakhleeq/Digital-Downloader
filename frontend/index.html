@@ -228,20 +228,25 @@
             </div>
 
             <!-- Compact quality and format options -->
-            <div class="choices">
-              <div class="field">
-                <label for="quality-select">Quality</label>
-                <select id="quality-select"></select>
-              </div>
-              <div class="field">
-                <label for="format-select">Format</label>
-                <select id="format-select"></select>
-              </div>
-              <div class="field">
-                <label for="output-select">Save as</label>
-                <select id="output-select"></select>
-              </div>
+            <div class="quality-picker">
+              <span class="picker-label" id="quality-chips-label">Quality</span>
+              <div class="quality-chips" id="quality-chips" role="radiogroup" aria-labelledby="quality-chips-label"></div>
+              <select id="quality-select" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
             </div>
+
+            <details class="more-options">
+              <summary>More options <span id="more-options-summary" class="more-options-summary"></span></summary>
+              <div class="choices">
+                <div class="field">
+                  <label for="format-select">Version</label>
+                  <select id="format-select"></select>
+                </div>
+                <div class="field">
+                  <label for="output-select">Save as</label>
+                  <select id="output-select"></select>
+                </div>
+              </div>
+            </details>
 
             <div class="card-action-area">
               <button type="button" class="button primary full-width download-main-btn" id="download-button" aria-describedby="download-hint">

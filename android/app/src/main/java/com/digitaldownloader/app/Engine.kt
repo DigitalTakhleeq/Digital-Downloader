@@ -268,11 +268,7 @@ object Engine {
         req.addOption("--extractor-retries", 2)
         cookieArgs(ctx, req)
 
-        if (isYouTube(url)) {
-            req.addOption("--extractor-args", "youtube:player_client=android,web;player_skip=configs")
-        } else {
-            req.addOption("--user-agent", BROWSER_USER_AGENT)
-        }
+        req.addOption("--user-agent", BROWSER_USER_AGENT)
 
         val timeout = watchdog.schedule(
             Runnable { YoutubeDL.destroyProcessById(processId) },
@@ -435,11 +431,7 @@ object Engine {
         req.addOption("--concurrent-fragments", 4)
         req.addOption("-o", workDir.absolutePath + "/%(title).120B.%(ext)s")
 
-        if (isYouTube(job.url)) {
-            req.addOption("--extractor-args", "youtube:player_client=android,web;player_skip=configs")
-        } else {
-            req.addOption("--user-agent", BROWSER_USER_AGENT)
-        }
+        req.addOption("--user-agent", BROWSER_USER_AGENT)
 
         if (fallbackMode) {
             req.addOption("-f", if (job.mode == "audio" || job.formatId == "audio") "ba/b" else "b/best")
