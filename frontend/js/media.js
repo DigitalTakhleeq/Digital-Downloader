@@ -18,6 +18,13 @@ function parseHeight(res) {
   return match ? parseInt(match[1], 10) : 0;
 }
 
+const QUALITY_NAMES = { 4320: "8K", 2160: "4K", 1440: "2K", 1080: "Full HD", 720: "HD", 480: "SD" };
+
+/** Picks the version that plays everywhere (MP4/H.264) before bigger-but-pickier codecs. */
+function compatibility(f) {
+  return (f.container === "mp4" ? 2 : 0) + (f.video_codec === "H.264" || !f.video_codec ? 1 : 0);
+}
+
 function groupFormats(formats) {
   // Always sort quality from highest resolution down to lowest, with audio at the end
   const sorted = [...formats].sort((a, b) => {
@@ -27,6 +34,7 @@ function groupFormats(formats) {
     const hB = parseHeight(b.resolution);
     if (hA !== hB) return hB - hA;
     if (a.has_audio !== b.has_audio) return a.has_audio ? -1 : 1;
+    if (compatibility(a) !== compatibility(b)) return compatibility(b) - compatibility(a);
     return (b.filesize || 0) - (a.filesize || 0) || (b.bitrate || 0) - (a.bitrate || 0);
   });
 
@@ -49,12 +57,37 @@ function option(value, text) {
 function formatOptionText(format, duplicates) {
   let text = format.container.toUpperCase();
   if (format.video_codec) text += ` · ${format.video_codec}`;
-  if (format.type === "video" && !format.has_audio) text += " · merged with best audio";
   if (format.filesize) {
     text += ` · ${formatSize(format.filesize, format.filesize_approximate)}`;
   }
   if (duplicates) text += ` [${format.id}]`;
   return text;
+}
+
+function renderChips() {
+  const selected = els.quality.value;
+  els.qualityChips.replaceChildren(
+    ...[...current.groups.entries()].map(([key, group]) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "quality-chip";
+      chip.setAttribute("role", "radio");
+      chip.setAttribute("aria-checked", String(key === selected));
+      const height = parseHeight(key);
+      const name = group[0].type === "audio" ? "MP3 / M4A / Opus" : QUALITY_NAMES[height];
+      chip.textContent = key;
+      if (name) {
+        const small = document.createElement("small");
+        small.textContent = name;
+        chip.append(small);
+      }
+      chip.addEventListener("click", () => {
+        els.quality.value = key;
+        fillFormats();
+      });
+      return chip;
+    }),
+  );
 }
 
 function fillFormats() {
@@ -63,6 +96,7 @@ function fillFormats() {
   els.format.replaceChildren(
     ...group.map((f, i) => option(f.id, formatOptionText(f, labels.filter((l) => l === labels[i]).length > 1))),
   );
+  renderChips();
   updateSize();
 }
 
@@ -79,6 +113,15 @@ function fillOutputs() {
   );
 }
 
+function updateMoreSummary() {
+  const format = selectedFormat();
+  if (!els.moreOptionsSummary) return;
+  const out = els.output.value ? els.output.selectedOptions[0].textContent : "original";
+  els.moreOptionsSummary.textContent = format
+    ? `${format.container.toUpperCase()}${format.video_codec ? " · " + format.video_codec : ""} → ${out}`
+    : "";
+}
+
 function updateSize() {
   const format = selectedFormat();
   if (els.size) {
@@ -87,6 +130,7 @@ function updateSize() {
   fillOutputs();
 
   // Populate formatted specs line (e.g. MP4 · 1080p · 3.2 MB · 3:33)
+  updateMoreSummary();
   if (els.mediaSpecs) {
     const parts = [];
     if (format?.container) parts.push(format.container.toUpperCase());
@@ -126,6 +170,7 @@ export function renderMedia(analysis) {
   els.quality.replaceChildren(...[...groups.keys()].map((key) => option(key, key)));
   fillFormats();
   els.quality.onchange = fillFormats;
+  els.output.onchange = updateMoreSummary;
   els.format.onchange = () => {
     updateSize();
     syncDownloadButton();

@@ -62,6 +62,8 @@ export const els = {
   duration: $("media-duration"),
   size: $("media-size"),
   quality: $("quality-select"),
+  qualityChips: $("quality-chips"),
+  moreOptionsSummary: $("more-options-summary"),
   format: $("format-select"),
   output: $("output-select"),
   download: $("download-button"),

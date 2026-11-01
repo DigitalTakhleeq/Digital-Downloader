@@ -37,6 +37,7 @@ with sync_playwright() as p:
     check("duration formatted h:mm:ss", page.inner_text("#media-duration") == "1:02:05", page.inner_text("#media-duration"))
     check("thumbnail visible", page.locator("#media-thumb-img").is_visible())
     check("quality options", page.locator("#quality-select option").all_inner_texts() == ["1080p", "720p60", "480p", "Audio only"], str(page.locator("#quality-select option").all_inner_texts()))
+    page.click(".more-options summary")
     check("format options for 1080p", page.locator("#format-select option").all_inner_texts() == ["MP4 · 393 MB", "WEBM · about 219 MB"], str(page.locator("#format-select option").all_inner_texts()))
     check("size shown", page.inner_text("#media-size") == "393 MB", page.inner_text("#media-size"))
     page.select_option("#format-select", "b")

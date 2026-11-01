@@ -1124,3 +1124,124 @@ dialog {
 .history-page-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1.25rem; }
 .history-page-head h1 { margin: 0; font-size: clamp(1.25rem, 4vw, 1.75rem); flex: 1; text-align: center; }
 .history-page .history-list { margin: 0; }
+
+/* Quality picker: resolution chips with the best preselected */
+.quality-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.picker-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.quality-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.quality-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.quality-chip small {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.quality-chip:hover {
+  border-color: var(--line-active);
+  background: var(--surface-hover);
+}
+
+.quality-chip[aria-checked="true"] {
+  border-color: var(--gold);
+  background: var(--brand-glow);
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+
+.quality-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.more-options {
+  margin-bottom: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  padding: 0 0.75rem;
+}
+
+.more-options summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.more-options-summary {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-options .choices {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin: 0.25rem 0 0.75rem;
+}
+
+/* Link bar: the field keeps a usable width and the buttons wrap below it when space is tight */
+.command-bar {
+  flex-wrap: wrap;
+}
+
+.command-bar input {
+  flex: 1 1 14rem;
+}
+
+.command-actions {
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.batch-mode {
+  height: 2.25rem;
+  padding: 0 0.6rem;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
