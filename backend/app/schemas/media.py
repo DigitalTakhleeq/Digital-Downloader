@@ -15,6 +15,8 @@ class FormatOut(BaseModel):
     filesize: int | None
     filesize_approximate: bool
     label: str
+    video_codec: str | None = None
+    bitrate: int | None = None
 
 
 class AnalyzeResponse(BaseModel):

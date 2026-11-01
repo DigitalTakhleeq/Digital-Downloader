@@ -38,6 +38,7 @@ export const els = {
   domainsMessage: $("domains-save-message"),
   universalMode: $("universal-mode-toggle"),
   cookiesStatusBadge: $("cookies-status-badge"),
+  cookiesBrowserSelect: $("cookies-browser-select"),
   cookiesFileInput: $("cookies-file-input"),
   pasteCookiesBtn: $("paste-cookies-button"),
   clearCookiesBtn: $("clear-cookies-button"),

@@ -27,7 +27,7 @@ function groupFormats(formats) {
     const hB = parseHeight(b.resolution);
     if (hA !== hB) return hB - hA;
     if (a.has_audio !== b.has_audio) return a.has_audio ? -1 : 1;
-    return (b.filesize || 0) - (a.filesize || 0);
+    return (b.filesize || 0) - (a.filesize || 0) || (b.bitrate || 0) - (a.bitrate || 0);
   });
 
   const groups = new Map();
@@ -48,6 +48,8 @@ function option(value, text) {
 
 function formatOptionText(format, duplicates) {
   let text = format.container.toUpperCase();
+  if (format.video_codec) text += ` · ${format.video_codec}`;
+  if (format.type === "video" && !format.has_audio) text += " · merged with best audio";
   if (format.filesize) {
     text += ` · ${formatSize(format.filesize, format.filesize_approximate)}`;
   }
