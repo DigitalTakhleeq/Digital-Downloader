@@ -10,6 +10,7 @@ from pathlib import Path
 from ..core.config import Settings, _DOMAIN
 from ..core.errors import AppError, ErrorCode
 from .file_service import PathSafetyError, validate_output_directory
+from .sources.ytdlp import COOKIE_BROWSERS
 
 logger = logging.getLogger("app.settings")
 
@@ -58,6 +59,10 @@ class SettingsService:
                     object.__setattr__(self._settings, "output_directory", resolved)
                 except (PathSafetyError, OSError, ValueError) as exc:
                     logger.warning("invalid persisted output directory, ignoring: %s", exc)
+
+            row_browser = conn.execute("SELECT value FROM app_settings WHERE key = 'cookies_browser'").fetchone()
+            if row_browser and row_browser["value"] in COOKIE_BROWSERS:
+                object.__setattr__(self._settings, "cookies_browser", row_browser["value"])
 
             row_domains = conn.execute("SELECT value FROM app_settings WHERE key = 'allowed_source_domains'").fetchone()
             if row_domains:
@@ -127,6 +132,22 @@ class SettingsService:
             return self.update_allowed_domains(["*"])
         return self.update_allowed_domains(POPULAR_DOMAINS.split(","))
 
+    def set_cookies_browser(self, browser: str | None) -> str | None:
+        """Read cookies straight from an installed browser (used when no cookies.txt is imported)."""
+        value = (browser or "").strip().lower()
+        if value == "none":
+            value = ""
+        elif value and value not in COOKIE_BROWSERS:
+            raise AppError(ErrorCode.INVALID_REQUEST, f"Unsupported browser: {browser}")
+        with self._lock, self._get_connection() as conn:
+            if value:
+                conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('cookies_browser', ?)", (value,))
+            else:
+                conn.execute("DELETE FROM app_settings WHERE key = 'cookies_browser'")
+            conn.commit()
+        object.__setattr__(self._settings, "cookies_browser", value or None)
+        return value or None
+
     def get_cookies_status(self) -> dict:
         cookies_file = self._settings.cookies_path
         if not cookies_file.is_file():
@@ -195,6 +216,7 @@ class SettingsService:
             "allowed_source_domains": sorted(self._settings.source_domains),
             "universal_mode": "*" in self._settings.source_domains or "all" in self._settings.source_domains,
             "has_cookies": self._settings.cookies_path.is_file(),
+            "cookies_browser": self._settings.cookies_browser,
             "max_parallel_jobs": self._settings.max_parallel_jobs,
             "max_download_gb": int(self._settings.max_download_bytes // (1024**3)),
             "log_level": self._settings.log_level,

@@ -24,6 +24,8 @@ def update_settings(body: UpdateSettingsRequest, request: Request) -> SettingsRe
     service = _settings(request)
     if body.output_directory is not None:
         service.update_output_directory(body.output_directory)
+    if body.cookies_browser is not None:
+        service.set_cookies_browser(body.cookies_browser)
     if body.universal_mode is not None:
         service.set_universal_mode(body.universal_mode)
     elif body.allowed_source_domains is not None:

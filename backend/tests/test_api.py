@@ -132,7 +132,7 @@ def test_analyze_returns_normalized_media(client, auth, monkeypatch):
     assert body["source"] == "fake" and body["url"] == "https://media.example/v?x=1"
     assert body["duration"] == 125 and body["thumbnail"] is None
     assert [f["id"] for f in body["formats"]] == ["v720", "a128"]
-    assert set(body["formats"][0]) == {"id", "type", "container", "resolution", "has_audio", "filesize", "filesize_approximate", "label"}
+    assert set(body["formats"][0]) == {"id", "type", "container", "resolution", "has_audio", "filesize", "filesize_approximate", "label", "video_codec", "bitrate"}
 
 
 def test_analyze_passes_hostile_titles_through_as_data(client, auth, monkeypatch):

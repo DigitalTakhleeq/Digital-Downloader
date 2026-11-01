@@ -47,6 +47,7 @@ class Settings:
     cors_origins: tuple[str, ...]
     source_domains: frozenset[str]
     max_download_bytes: int
+    cookies_browser: str | None = None
 
     @classmethod
     def load(cls, env: Mapping[str, str] | None = None) -> "Settings":
