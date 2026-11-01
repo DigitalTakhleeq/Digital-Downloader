@@ -231,7 +231,15 @@ jobs:
             exit 0
           fi
 
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          # Tolerate pasted values with line breaks, CRLF or certutil-style BEGIN/END lines.
+          if ! printf '%s' "$KEYSTORE_B64" | grep -v -e '^-----' | tr -d '[:space:]' | base64 -d > "$RUNNER_TEMP/release.keystore" 2>/dev/null; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not valid base64. Re-create it with the PowerShell command in docs/release.md (one line, no extra text) and update the secret."
+            exit 1
+          fi
+          if ! keytool -list -keystore "$RUNNER_TEMP/release.keystore" -storepass:env KEYSTORE_PASS >/dev/null 2>&1; then
+            echo "::error::The keystore decoded, but could not be opened. Check that ANDROID_KEYSTORE_PASSWORD matches this keystore and that the secret holds the .jks file."
+            exit 1
+          fi
           APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -n 1)
 
           SRC_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
