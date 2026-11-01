@@ -211,6 +211,16 @@ jobs:
             cp android/app/build/outputs/apk/debug/app-debug.apk release-apks/DigitalDownloader-debug.apk
           fi
 
+          # Name every missing secret (never its value) so a bad setup is obvious from the log.
+          missing=""
+          [ -z "$KEYSTORE_B64" ] && missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -z "$KEYSTORE_PASS" ] && missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -z "$KEY_ALIAS" ] && missing="$missing ANDROID_KEY_ALIAS"
+          [ -z "$KEY_PASS" ] && missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::warning::Empty or missing secrets in ${GITHUB_REPOSITORY}:${missing}. They must be repository secrets (Settings > Secrets and variables > Actions > Repository secrets) of this exact repository; secrets from the old HaronKhalid repo, Environment secrets and unshared organization secrets are not visible here."
+          fi
+
           if [ -z "$KEYSTORE_B64" ]; then
             if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
               echo "::error::Release tag build requires the Android signing secrets (see docs/release.md)."
