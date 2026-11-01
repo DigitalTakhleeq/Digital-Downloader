@@ -6,6 +6,7 @@ class SettingsResponse(BaseModel):
     allowed_source_domains: list[str]
     universal_mode: bool = False
     has_cookies: bool = False
+    cookies_browser: str | None = None
     max_parallel_jobs: int
     max_download_gb: int
     log_level: str
@@ -16,6 +17,7 @@ class UpdateSettingsRequest(BaseModel):
     output_directory: str | None = Field(default=None, min_length=1, max_length=4096)
     allowed_source_domains: list[str] | None = Field(default=None)
     universal_mode: bool | None = Field(default=None)
+    cookies_browser: str | None = Field(default=None, max_length=20)  # "" or "none" clears it
 
 
 class CookieStatusResponse(BaseModel):

@@ -340,6 +340,19 @@
             <span id="cookies-status-badge" class="badge">No cookies</span>
           </div>
           <p class="field-hint">Only needed for private Instagram posts, age-restricted videos, or accounts requiring login.</p>
+          <div class="field-row" id="cookies-browser-row">
+            <label for="cookies-browser-select">Or use cookies from my browser</label>
+            <select id="cookies-browser-select">
+              <option value="">Off</option>
+              <option value="chrome">Chrome</option>
+              <option value="edge">Edge</option>
+              <option value="firefox">Firefox</option>
+              <option value="brave">Brave</option>
+              <option value="opera">Opera</option>
+              <option value="vivaldi">Vivaldi</option>
+            </select>
+            <p class="field-hint field-hint-tight">Close the browser first. Firefox is the most reliable; a cookies.txt upload takes priority over this.</p>
+          </div>
           <div class="cookies-actions">
             <label class="button quiet small file-upload-label">
               <span>Upload cookies.txt</span>

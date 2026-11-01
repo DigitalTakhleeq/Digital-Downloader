@@ -254,6 +254,7 @@ async function loadSettings() {
     if (isAndroidApp()) setupAndroidSettings(data);
     else setupExtensionSettings();
 
+    if (els.cookiesBrowserSelect) els.cookiesBrowserSelect.value = data.cookies_browser || "";
     const cookies = await api.getCookies();
     renderCookiesStatus(cookies);
   } catch {
@@ -557,6 +558,18 @@ async function start() {
         setDomainsMessage("ok", enabled ? "Universal Mode active (Seal style: all sites allowed)." : "Curated allowed sites active.");
       } catch (err) {
         setDomainsMessage("error", err instanceof ApiError ? err.message : "Failed to update mode.");
+      }
+    });
+  }
+
+  if (els.cookiesBrowserSelect) {
+    els.cookiesBrowserSelect.addEventListener("change", async () => {
+      const browser = els.cookiesBrowserSelect.value;
+      try {
+        await api.updateSettings({ cookies_browser: browser || "none" });
+        setCookiesMessage("ok", browser ? `Using ${browser} cookies for restricted sites.` : "Browser cookies turned off.");
+      } catch (err) {
+        setCookiesMessage("error", err instanceof ApiError ? err.message : "Could not save the browser choice.");
       }
     });
   }

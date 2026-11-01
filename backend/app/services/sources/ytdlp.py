@@ -25,6 +25,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
+from ...core.config import Settings
 from ...core.errors import AppError, ErrorCode
 from ...models.media import MediaFormat, MediaInfo
 from ...utils.urls import ValidatedURL, redact_text
@@ -38,7 +39,7 @@ logger = logging.getLogger("app.ytdlp")
 Runner = Callable[[list[str], float], tuple[int, bytes, bytes]]
 
 MAX_OUTPUT_BYTES = 20 * 1024 * 1024
-MAX_FORMATS = 60
+MAX_FORMATS = 120
 MAX_TITLE = 200
 ALLOWED_PROTOCOLS = frozenset({
     "http", "https", "m3u8", "m3u8_native", "https+m3u8", "http+m3u8",
@@ -126,6 +127,25 @@ def detect_ytdlp() -> tuple[bool, str | None, str | None]:
         return True, None, None
 
 
+def find_js_runtime() -> tuple[str, str] | None:
+    """(name, path) of a JavaScript runtime yt-dlp can use. YouTube hides its high-quality
+    formats unless the extractor can run the site's player script, so without one only ~360p shows up."""
+    from ...core.config import REPO_ROOT
+
+    for name in ("deno", "node", "bun"):
+        exe = f"{name}.exe" if sys.platform == "win32" else name
+        for folder in (managed_ytdlp_dir(), REPO_ROOT / "bin"):
+            if (folder / exe).is_file():
+                return name, str(folder / exe)
+        found = shutil.which(name)
+        if found:
+            return name, found
+    return None
+
+
+COOKIE_BROWSERS = ("chrome", "edge", "firefox", "brave", "opera", "vivaldi", "chromium", "safari")
+
+
 def default_runner(args: list[str], timeout: float) -> tuple[int, bytes, bytes]:
     env = controlled_env()
     env.update({"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"})
@@ -189,6 +209,25 @@ def _positive_int(value: object) -> int | None:
     return int(value) if value > 0 else None
 
 
+def _codec_name(vcodec: object) -> str | None:
+    if not isinstance(vcodec, str) or vcodec in ("none", ""):
+        return None
+    v = vcodec.lower()
+    for prefix, name in (("av01", "AV1"), ("avc", "H.264"), ("h264", "H.264"), ("vp09", "VP9"), ("vp9", "VP9"),
+                         ("vp8", "VP8"), ("hev", "H.265"), ("hvc", "H.265"), ("h265", "H.265")):
+        if v.startswith(prefix):
+            return name
+    return None
+
+
+def _quality_height(raw: dict) -> int | None:
+    """Vertical clips (1080x1920) are 1080p, not 1920p: the short side names the quality."""
+    height, width = _positive_int(raw.get("height")), _positive_int(raw.get("width"))
+    if height and width and height > width:
+        return width
+    return height
+
+
 def _normalize_format(raw: object) -> MediaFormat | None:
     if not isinstance(raw, dict):
         return None
@@ -205,9 +244,11 @@ def _normalize_format(raw: object) -> MediaFormat | None:
         return None
 
     vcodec, acodec = raw.get("vcodec"), raw.get("acodec")
-    height = _positive_int(raw.get("height"))
-    has_video = (vcodec != "none" and (vcodec is not None or height is not None)) or ext in ("mp4", "webm", "mkv", "mov", "avi")
-    has_audio = (acodec != "none") or ext in ("mp3", "m4a", "aac", "ogg", "opus", "wav", "flac")
+    height = _quality_height(raw)
+    is_vcodec_none = (vcodec == "none")
+    is_acodec_none = (acodec == "none")
+    has_video = not is_vcodec_none and (vcodec is not None or height is not None or ext in ("mp4", "webm", "mkv", "mov", "avi"))
+    has_audio = not is_acodec_none and (acodec is not None or ext in ("mp3", "m4a", "aac", "ogg", "opus", "wav", "flac"))
     if not has_video and not has_audio:
         return None
 
@@ -218,10 +259,12 @@ def _normalize_format(raw: object) -> MediaFormat | None:
     if has_video:
         fps = _positive_int(raw.get("fps"))
         resolution = f"{height}p{fps}" if height and fps and fps > 30 else (f"{height}p" if height else None)
-        label = f"{resolution or 'Video'} · {container}" + ("" if has_audio else " (no audio)")
+        codec = _codec_name(vcodec)
+        label = f"{resolution or 'Video'} · {container}" + (f" · {codec}" if codec else "") + ("" if has_audio else " (no audio)")
         kind = "video"
     else:
         resolution = None
+        codec = None
         abr = _positive_int(raw.get("abr"))
         label = f"Audio · {container}" + (f" · {abr} kbps" if abr else "")
         kind = "audio"
@@ -234,6 +277,8 @@ def _normalize_format(raw: object) -> MediaFormat | None:
         filesize=size,
         filesize_approximate=bool(size) and not exact,
         label=label,
+        video_codec=codec,
+        bitrate=_positive_int(raw.get("tbr")),
     )
 
 
@@ -272,7 +317,7 @@ def normalize_info(info: object, *, source_id: str, source_label: str, url: str)
         height = int(match.group(1)) if match else 0
         fps = int(match.group(2) or 0) if match else 0
         # video first; higher resolution, then higher frame rate, then formats that include audio
-        return (f.type != "video", -height, -fps, not f.has_audio, f.container)
+        return (f.type != "video", -height, -fps, not f.has_audio, -(f.bitrate or 0), f.container)
 
     formats.sort(key=sort_key)
 
@@ -338,10 +383,18 @@ class YtDlpSource(MediaSource):
         cookies_file = self._settings.cookies_path if self._settings is not None else None
         if cookies_file and cookies_file.is_file():
             return ["--cookies", str(cookies_file)]
-        default_file = Path("data/cookies.txt")
-        if default_file.is_file():
-            return ["--cookies", str(default_file)]
+        browser = getattr(self._settings, "cookies_browser", None)
+        if browser in COOKIE_BROWSERS:
+            return ["--cookies-from-browser", browser]
         return ["--no-cookies"]
+
+    def _js_runtime_args(self) -> list[str]:
+        runtime = find_js_runtime()
+        if runtime is None:
+            return []
+        name, path = runtime
+        # "ejs:github" lets yt-dlp fetch its challenge solver when the install doesn't bundle it.
+        return ["--js-runtimes", f"{name}:{path}", "--remote-components", "ejs:github"]
 
     def _cache_args(self) -> list[str]:
         # Keeping yt-dlp's cache (YouTube player/signature data) makes repeat analyses several seconds faster.
@@ -370,13 +423,12 @@ class YtDlpSource(MediaSource):
             *self._base_command,
             "--ignore-config", "--no-plugin-dirs", *self._cache_args(), "--no-exec",
             *self._cookie_args(),
+            *self._js_runtime_args(),
             *self._impersonate_args(url),
             "--dump-single-json", "--no-playlist", "--no-warnings", "--no-progress",
             "--socket-timeout", "15", "--retries", "2", "--extractor-retries", "2",
         ]
-        if is_youtube_url(url):
-            cmd.extend(["--extractor-args", "youtube:player_client=android,web;player_skip=configs"])
-        elif not self._impersonate_args(url):
+        if not self._impersonate_args(url):
             cmd.extend(["--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"])
         cmd.extend(["--", url])
         return cmd
@@ -516,6 +568,7 @@ class YtDlpSource(MediaSource):
             *self._base_command,
             "--ignore-config", "--no-plugin-dirs", *self._cache_args(), "--no-exec",
             *self._cookie_args(),
+            *self._js_runtime_args(),
             *self._impersonate_args(url),
             "--no-playlist", "--no-warnings", "--no-mtime", "--newline",
             "--socket-timeout", "15", "--retries", "2", "--fragment-retries", "2",
@@ -524,9 +577,7 @@ class YtDlpSource(MediaSource):
             "-f", fmt_id,
             "-o", template,
         ]
-        if is_youtube_url(url):
-            command.extend(["--extractor-args", "youtube:player_client=android,web;player_skip=configs"])
-        elif not self._impersonate_args(url):
+        if not self._impersonate_args(url):
             command.extend(["--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"])
         if ctx.ffmpeg_location:
             command += ["--ffmpeg-location", ctx.ffmpeg_location]
